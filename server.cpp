@@ -23,12 +23,14 @@ void write_file(std::vector<byte> buf) {
     fp.close();
 }
 
+// EXTRAI LEN_DATA BYTES DE SRC
 std::vector<byte> extract_data(std::vector<byte>& src, int len_data) {
     std::vector<byte> ret(src.begin()+sizeof(int), src.begin()+sizeof(int)+len_data);
     src.erase(src.begin(), src.begin()+sizeof(int)+len_data);
     return ret;
 }
 
+// EMPURRA OS DADOS EM BUF
 uint recv_(int fd, std::vector<byte>& buf) {
     byte aux[1024];
     int len = recv(fd, aux, sizeof(aux), NULL);
@@ -36,51 +38,30 @@ uint recv_(int fd, std::vector<byte>& buf) {
     return len;
 }
 
-void recv_everything(int fd) {
+// QUEBRA OS PACOTES RECEBIDOS (QUE PODEM SER PEDAÇOS DE UM COMANDO/MENSAGEM) E OS JUNTA CERTINHO
+// NO FINAL.. E DISPACHA.
+void client_handle(int fd) {
     for(;;) {
         std::vector<byte> buf, data;
-
         uint len = recv_(fd, buf);
+
+        if(len == 0) {
+            break;
+        }
 
         int len_data; memcpy(&len_data, &buf[0], sizeof(int));
 
         while(len-sizeof(int) < len_data) {
             len += recv_(fd, buf);
         }
-
+		
+		// 
         data = extract_data(buf, len_data);
 
-        write_file()
-
-        // to do
+        write_file(data);
+        std::cout << "len data: "  << data.size() << std::endl;
     }
 }
-
-void client_handle(int client_fd) {
-    int len;
-    std::vector<byte> buf(1024);
-    for(;;) {
-        len = recv(client_fd, buf.data(), buf.size(), NULL);
-
-        std::cout << "tamanho do primeiro pacote recebido: " << len << std::endl;
-
-        if(len == -1) {
-            std::cout << "Algum erro ocorreu" << std::endl;
-            continue;
-        }
-
-        if(len == 0) {
-            return; // closed conection
-        }
-
-        write_file(buf.data(), len);
-        std::cout << "Arquivo criado com sucesso" << std::endl;
-    }
-}
-
-// int main() {
-
-// }
 
 int main(int argc, char const* argv[]) {
 	int server_fd, client_fd, valread;
@@ -120,7 +101,8 @@ int main(int argc, char const* argv[]) {
 	}
 
     std::cout << "Server iniciado" << std::endl;
-
+	
+	// ACEITA REQUISIÇÕES DE CLIENTES
     for(;;) {
         if(listen(server_fd, 20) == -1) {
             std::cout << "Erro na funcao listen" << std::endl;
