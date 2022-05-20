@@ -1,5 +1,3 @@
-// Client side C/C++ program to demonstrate Socket
-// programming
 #include <arpa/inet.h>
 #include <iostream>
 #include <string.h>
@@ -12,9 +10,8 @@
 
 #define PORT 8080
 
-void read_file(std::vector<unsigned char>& buf) {
-    std::ifstream fp("saida.csv", std::ios::binary);
-    //std::ofstream fp_out("teste.csv", std::ios::binary);
+void read_file(std::vector<unsigned char>& buf, std::string file_name) {
+    std::fstream fp(file_name, std::ios::binary | std::ios::in);
 
     // aponta o ponteiro pro final do arquivo
     fp.seekg(0, std::ios::end);
@@ -24,22 +21,18 @@ void read_file(std::vector<unsigned char>& buf) {
     buf.resize(len+4);
 
     memcpy(&buf[0], &len, sizeof(int));
-    std::cout << *(int*)&buf[0] << std::endl;
 
     fp.read((char*)&buf[4], len);
-    //fp_out.write((char*)buf.data(), len);
-
     fp.close();
-    //fp_out.close();
+}
 
+void choice_file(std::vector<unsigned char>& buf) {
+	std::cout << "Digite o nome do arquivo que deseja enviar para o servidor" << std::endl;
+	std::string aux; std::cin >> aux;
+	read_file(buf, aux);
 }
 
 int main(int argc, char const* argv[]) {
-    std::vector<unsigned char> arrs;
-    read_file(arrs);
-
-    return 0;
-
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
 	char buffer[1024] = { 0 };
@@ -63,11 +56,11 @@ int main(int argc, char const* argv[]) {
 		return -1;
 	}
 
-    std::vector<unsigned char> arr(4);
-
-    read_file(arr);
+	std::vector<unsigned char> arr;
+	choice_file(arr);
 
 	send(sock, arr.data(), arr.size(), 0);
-    std::cout << "Arquivo enviado" << std::endl;
-	return 0;
+	std::cout << "Arquivo enviado" << std::endl;
+	close(sock);
+    return 0;
 }
