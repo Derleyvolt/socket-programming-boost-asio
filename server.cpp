@@ -1,5 +1,3 @@
-// Server side C/C++ program to demonstrate Socket
-// programming
 #include <iostream>
 #include <string>
 #include <string.h>
@@ -15,16 +13,52 @@
 
 #define PORT 8080
 
-void write_file(unsigned char* buf, int len) {
+typedef unsigned char byte;
+typedef unsigned int  uint;
+
+void write_file(std::vector<byte> buf) {
     std::ofstream fp("servidor.csv", std::ios::binary);
 
-    fp.write((char*)buf, len);
+    fp.write((char*)&buf[0], buf.size());
     fp.close();
+}
+
+std::vector<byte> extract_data(std::vector<byte>& src, int len_data) {
+    std::vector<byte> ret(src.begin()+sizeof(int), src.begin()+sizeof(int)+len_data);
+    src.erase(src.begin(), src.begin()+sizeof(int)+len_data);
+    return ret;
+}
+
+uint recv_(int fd, std::vector<byte>& buf) {
+    byte aux[1024];
+    int len = recv(fd, aux, sizeof(aux), NULL);
+    for(int i = 0; i < len; i++) buf.push_back(aux[i]);
+    return len;
+}
+
+void recv_everything(int fd) {
+    for(;;) {
+        std::vector<byte> buf, data;
+
+        uint len = recv_(fd, buf);
+
+        int len_data; memcpy(&len_data, &buf[0], sizeof(int));
+
+        while(len-sizeof(int) < len_data) {
+            len += recv_(fd, buf);
+        }
+
+        data = extract_data(buf, len_data);
+
+        write_file()
+
+        // to do
+    }
 }
 
 void client_handle(int client_fd) {
     int len;
-    std::vector<unsigned char> buf(1024);
+    std::vector<byte> buf(1024);
     for(;;) {
         len = recv(client_fd, buf.data(), buf.size(), NULL);
 
@@ -39,10 +73,14 @@ void client_handle(int client_fd) {
             return; // closed conection
         }
 
-        write_file(buf, len);
+        write_file(buf.data(), len);
         std::cout << "Arquivo criado com sucesso" << std::endl;
     }
 }
+
+// int main() {
+
+// }
 
 int main(int argc, char const* argv[]) {
 	int server_fd, client_fd, valread;
