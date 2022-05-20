@@ -1,5 +1,5 @@
-#include <arpa/inet.h>
 #include <iostream>
+#include <arpa/inet.h>
 #include <string.h>
 #include <string>
 #include <sys/socket.h>
@@ -10,7 +10,9 @@
 
 #define PORT 8080
 
-void read_file(std::vector<unsigned char>& buf, std::string file_name) {
+typedef unsigned char byte;
+
+void read_file(std::vector<byte>& buf, std::string file_name) {
     std::fstream fp(file_name, std::ios::binary | std::ios::in);
 
     // aponta o ponteiro pro final do arquivo
@@ -26,7 +28,7 @@ void read_file(std::vector<unsigned char>& buf, std::string file_name) {
     fp.close();
 }
 
-void choice_file(std::vector<unsigned char>& buf) {
+void menu(std::vector<byte>& buf) {
 	std::cout << "Digite o nome do arquivo que deseja enviar para o servidor" << std::endl;
 	std::string aux; std::cin >> aux;
 	read_file(buf, aux);
@@ -45,22 +47,27 @@ int main(int argc, char const* argv[]) {
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port   = htons(PORT);
 
+	std::cout << "Digite o ip ao qual voce deseja se conectar" << std::endl;
+	std::string server_ip; std::cin >> server_ip;
+
 	// Convert IPv4 and IPv6 addresses from text to binary form
-	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-		printf("\nInvalid address/ Address not supported \n");
+	if (inet_pton(AF_INET, server_ip.c_str(), &serv_addr.sin_addr) <= 0) {
+		std::cout << "Endereco invalido" << std::endl;
 		return -1;
 	}
 
 	if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-		printf("\nConnection Failed \n");
+		std::cout << "Conexao faliu" << std::endl;
 		return -1;
+	} else {
+		std::cout << "Conectado com sucesso" << std::endl << std::endl;
 	}
 
-	std::vector<unsigned char> arr;
-	choice_file(arr);
+    std::vector<byte> arr;
+    menu(arr);
 
-	send(sock, arr.data(), arr.size(), 0);
-	std::cout << "Arquivo enviado" << std::endl;
+	send(sock, (char*)arr.data(), arr.size(), 0);
+    std::cout << "Arquivo enviado" << std::endl;
 	close(sock);
     return 0;
 }
