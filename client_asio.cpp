@@ -1,8 +1,11 @@
+//#define ASIO_STANDLONE
 #include <iostream>
 #include <vector>
 #include <boost/asio.hpp>
 #include <thread>
 #include <chrono>
+#include <fstream>
+#include <sstream>
 #include <mutex>
 
 using namespace std;
@@ -10,17 +13,51 @@ using namespace std;
 using namespace boost::asio;
 using ip::tcp;
 
-typedef unsigned char  byte;
-typedef unsigned short ushort;
-typedef unsigned int   uint;
+typedef unsigned char  uint_8;
+typedef unsigned short uint_16;
+typedef unsigned int   uint_32;
 
-#define PORT 80
+#define PORT 1649
 
 bool message_error(boost::system::error_code ec) {
     if(ec.failed()) {
         cout << ec << endl;
         return 1;
     }
+
+    return 0;
+}
+
+int read_file(std::vector<uint_8>& data) {
+    cout << "Digite o nome do arquivo a ser enviado" << endl;
+    string s; cin >> s;
+
+
+    ifstream fp(s, ios::binary);
+
+    if(not fp.is_open()) {
+        cout << "Algo errado ao tentar abrir o arquivo " << s << endl;
+        this_thread::sleep_for(std::chrono::seconds(2));
+        return -1;
+    }
+
+    int len = 0;
+
+    if(fp.is_open()) {
+        fp.seekg(0, ios::end);
+        len = fp.tellg();
+        fp.seekg(0);
+    }
+
+    cout << "tamanho: " << len << endl;
+
+    data.resize(len+sizeof(int));
+
+    memcpy(&data[0], &len, sizeof(int));
+
+    fp.read((char*)&data[4], len);
+
+    return 1;
 }
 
 template<typename container>
@@ -34,12 +71,11 @@ void send_all(ip::tcp::socket& fd, container& buf) {
 }
 
 void client(ip::tcp::socket& fd) {
-    for(;;) {
-        cout << "Digite uma mensagem" << endl;
-        string buf; cin >> buf;
-        uint sent_bytes = 0;
+    vector<uint_8> data;
 
-        send_all(fd, buf);
+    for(;;) {
+        while(read_file(data) == -1);
+        send_all(fd, data);
     }
 }
 
@@ -49,6 +85,8 @@ int main() {
 
     ip::tcp::endpoint server_addr(ip::make_address("127.0.0.1", ec), PORT);
 
+    //acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+
     ip::tcp::socket socket(context);
 
     socket.connect(server_addr, ec);
@@ -57,7 +95,6 @@ int main() {
         cout << "Conectado" << endl;
     }
 
-    thread t_handle(client, socket);
-    t_handle.join();
+    client(socket);
     return 0;
 }
