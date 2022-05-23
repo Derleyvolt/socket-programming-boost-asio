@@ -1,12 +1,9 @@
-//#define ASIO_STANDLONE
 #include <iostream>
 #include <vector>
 #include <boost/asio.hpp>
 #include <thread>
 #include <chrono>
 #include <mutex>
-
-// https://www.facebook.com/reel/1175735499930199
 
 using namespace std;
 
