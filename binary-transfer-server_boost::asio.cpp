@@ -92,6 +92,7 @@ void handle_client(ip::tcp::socket& fd, int id) {
 void clear_dead_connections(uint_32 sec) {
     for(;;) {
         std::this_thread::sleep_for(std::chrono::seconds(sec));
+        std::lock_guard<std::mutex> lg(mu);
         for(int i = 0; i < client_fd.size(); i++) {
             if(not client_fd[i].is_open()) {
                 swap(client_fd[i], client_fd.back());
@@ -128,7 +129,9 @@ int main() {
 
     for(;;) {
         // bloqueia até receber clientes
-        client_fd.push_back(acceptor_.accept(ec));
+        auto client_socket = acceptor_.accept(ec);
+        std::lock_guard<std::mutex> lg(mu);
+        client_fd.push_back(client_socket);
         message_error(ec);
         cout << "O cliente " << client_index << " se conectou" << endl;
         thread t_client(handle_client, ref(client_fd.back()), client_index);
