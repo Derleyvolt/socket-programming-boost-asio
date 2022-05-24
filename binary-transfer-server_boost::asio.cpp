@@ -9,6 +9,7 @@
 #include <mutex>
 
 using namespace std;
+using namespace chrono;
 
 using namespace boost::asio;
 using ip::tcp;
@@ -21,6 +22,11 @@ typedef unsigned int   uint_32;
 #define CLIENT_QUEUE 20
 
 int client_index;
+
+std::mutex mu;
+
+// lembrar de limpar as conexões que estão fechadas e reorganizar o array.. depois.
+vector<ip::tcp::socket> client_fd;
 
 bool message_error(boost::system::error_code ec) {
     if(ec.failed()) {
@@ -83,6 +89,18 @@ void handle_client(ip::tcp::socket& fd, int id) {
     }
 }
 
+void clear_dead_connections(uint_32 sec) {
+    for(;;) {
+        std::this_thread::sleep_for(std::chrono::seconds(sec));
+        for(int i = 0; i < client_fd.size(); i++) {
+            if(not client_fd[i].is_open()) {
+                swap(client_fd[i], client_fd.back());
+                client_fd.pop_back();
+            }
+        }
+    }
+}
+
 int main() {
     boost::system::error_code ec;
     io_context context;
@@ -94,7 +112,6 @@ int main() {
 
     tcp::acceptor acceptor_(context);
 
-
     acceptor_.open(endpoint.protocol(), ec);
     acceptor_.bind(endpoint, ec);
     acceptor_.listen(CLIENT_QUEUE, ec);
@@ -104,8 +121,10 @@ int main() {
         cout << "Servidor iniciado com sucesso" << endl;
     }
 
-    // lembrar de limpar as conexões que estão fechadas e reorganizar o array.. depois.
-    vector<ip::tcp::socket> client_fd;
+    // roda a cada duas horas pra limpar os sockets fechados do vetor
+    // de clientes
+    std::thread t_timer(clear_dead_connections, 2 * 3600);
+    t_timer.detach();
 
     for(;;) {
         // bloqueia até receber clientes
