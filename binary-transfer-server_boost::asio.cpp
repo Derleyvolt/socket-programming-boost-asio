@@ -130,8 +130,12 @@ int main() {
     for(;;) {
         // bloqueia até receber clientes
         auto client_socket = acceptor_.accept(ec);
-        std::lock_guard<std::mutex> lg(mu);
+
+        // data race com a daemon thread limpadora de sockets
+        std::unique_lock<std::mutex> ul(mu);
         client_fd.push_back(client_socket);
+        ul.unlock();
+
         message_error(ec);
         cout << "O cliente " << client_index << " se conectou" << endl;
         thread t_client(handle_client, ref(client_fd.back()), client_index);
