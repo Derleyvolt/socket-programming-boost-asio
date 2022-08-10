@@ -94,7 +94,6 @@ int main(int argc, char const* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-    // blocking
 	if (listen(server_fd, 20) < 0) {
 		perror("listen");
 		exit(EXIT_FAILURE);
@@ -104,11 +103,7 @@ int main(int argc, char const* argv[]) {
 	
 	// ACEITA REQUISIÇÕES DE CLIENTES
     for(;;) {
-        if(listen(server_fd, 20) == -1) {
-            std::cout << "Erro na funcao listen" << std::endl;
-            continue;
-        }
-
+        // blocking
         if ((client_fd = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
             std::cout << "Erro na funcao accept" << std::endl;
         }
